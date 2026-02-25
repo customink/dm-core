@@ -55,7 +55,3 @@ jobs:
 
             ${{ steps.prompt.outputs.REVIEW_PROMPT }}
           claude_args: "--model claude-opus-4-6 --max-turns 3"
-          plugin_marketplaces: |
-            https://github.com/customink/claude-marketplace.git
-          plugins: |
-            ada@customink-plugins
