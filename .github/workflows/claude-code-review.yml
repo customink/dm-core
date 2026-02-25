@@ -1,0 +1,51 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: read
+  id-token: write
+
+jobs:
+  review:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build review prompt
+        id: prompt
+        run: |
+          DELIMITER="PROMPT_EOF_$(uuidgen)"
+          {
+            echo "REVIEW_PROMPT<<${DELIMITER}"
+            for f in CLAUDE.md AGENTS.md; do
+              if [ -f "$f" ]; then
+                cat "$f"
+                echo ""
+              fi
+            done
+            cat .claude/review-prompt.md
+            echo "${DELIMITER}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Claude Code Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Review this pull request using the following guidelines:
+
+            ${{ steps.prompt.outputs.REVIEW_PROMPT }}
+          claude_args: "--model claude-opus-4-6 --max-turns 3"
+          plugin_marketplaces: |
+            https://github.com/customink/claude-marketplace.git
+          plugins: |
+            ada@customink-plugins
