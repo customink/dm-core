@@ -30,6 +30,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Fetch PR diff
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr diff "${{ github.event.pull_request.number }}" > /tmp/pr-diff.patch
+
       - name: Build review prompt
         id: prompt
         run: |
@@ -47,11 +53,18 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Claude Code Review
+        continue-on-error: true
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
+            You are reviewing PR #${{ github.event.pull_request.number }}.
+            The full diff is in /tmp/pr-diff.patch — Read that file first.
+            Do NOT run gh pr diff or git diff to re-fetch it.
+            Use Read on source files if you need more context beyond the diff.
+            Post inline review comments and stop.
+
             Review this pull request using the following guidelines:
 
             ${{ steps.prompt.outputs.REVIEW_PROMPT }}
-          claude_args: "--model claude-opus-4-6 --max-turns 3"
+          claude_args: '--model claude-opus-4-6 --max-turns 10 --allowedTools "Read,Glob,Grep,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr view:*)"'
