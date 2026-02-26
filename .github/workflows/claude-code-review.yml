@@ -20,21 +20,31 @@ jobs:
   review:
     if: |
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false) ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude'))
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve PR number
+        id: pr
+        run: |
+          if [ "${{ github.event_name }}" = "issue_comment" ]; then
+            echo "number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "number=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: refs/pull/${{ steps.pr.outputs.number }}/head
           fetch-depth: 0
 
       - name: Fetch PR diff
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh pr diff "${{ github.event.pull_request.number }}" > /tmp/pr-diff.patch
+          gh pr diff "${{ steps.pr.outputs.number }}" > /tmp/pr-diff.patch
 
       - name: Build review prompt
         id: prompt
@@ -58,7 +68,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
-            You are reviewing PR #${{ github.event.pull_request.number }}.
+            You are reviewing PR #${{ steps.pr.outputs.number }}.
             The full diff is in /tmp/pr-diff.patch — Read that file first.
             Do NOT run gh pr diff or git diff to re-fetch it.
             Use Read on source files if you need more context beyond the diff.
