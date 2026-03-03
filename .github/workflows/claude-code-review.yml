@@ -23,6 +23,9 @@ jobs:
       (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude'))
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
       - name: Resolve PR number
@@ -58,7 +61,9 @@ jobs:
                 echo ""
               fi
             done
-            cat .claude/review-prompt.md
+            if [ -f ".claude/review-prompt.md" ]; then
+              cat .claude/review-prompt.md
+            fi
             echo "${DELIMITER}"
           } >> "$GITHUB_OUTPUT"
 
