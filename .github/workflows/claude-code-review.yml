@@ -23,6 +23,9 @@ jobs:
       (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude'))
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
       - name: Resolve PR number
@@ -58,9 +61,21 @@ jobs:
                 echo ""
               fi
             done
-            cat .claude/review-prompt.md
+            if [ -f ".claude/review-prompt.md" ]; then
+              cat .claude/review-prompt.md
+            fi
             echo "${DELIMITER}"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Resolve claude_args
+        id: args
+        run: |
+          ALLOWED_TOOLS='Read,Glob,Grep,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr view:*)'
+          if [ -n "${{ vars.CLAUDE_REVIEW_MODEL }}" ]; then
+            echo "value=--model ${{ vars.CLAUDE_REVIEW_MODEL }} --max-turns 10 --allowedTools \"${ALLOWED_TOOLS}\"" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=--max-turns 10 --allowedTools \"${ALLOWED_TOOLS}\"" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Claude Code Review
         continue-on-error: true
@@ -77,4 +92,4 @@ jobs:
             Review this pull request using the following guidelines:
 
             ${{ steps.prompt.outputs.REVIEW_PROMPT }}
-          claude_args: '--model claude-opus-4-6 --max-turns 10 --allowedTools "Read,Glob,Grep,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr view:*)"'
+          claude_args: "${{ steps.args.outputs.value }}"
