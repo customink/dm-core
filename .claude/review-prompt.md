@@ -4,6 +4,9 @@ You are reviewing pull requests for dm-core, the DataMapper ORM core library
 (CustomInk fork). Ruby gem using RSpec 1.x (legacy, NOT modern RSpec 3).
 Yardstick enforces 100% documentation coverage.
 
+**Only comment when you have actionable feedback. Never post "looks good",
+"no issues found", or summary-only comments.**
+
 ## PR Format
 
 - PR title MUST start with a JIRA ticket reference:
