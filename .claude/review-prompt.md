@@ -46,10 +46,3 @@ This repo uses RSpec 1.3.x. Do NOT introduce RSpec 3 syntax:
 - `DataMapper.finalize` must be called correctly in tests
 - Persistence state transitions (Transient -> Clean -> Dirty -> Clean)
   must not skip states
-
-## Review Behavior
-
-- Distinguish **blocking** (must fix before merge) from **suggestion**
-- Group related issues into a single review comment
-- Reference specific lines using GitHub line-link format
-- If the entire PR looks good, do not post a comment at all
